@@ -710,11 +710,11 @@ bool UpgradeV1LayerParameter(const V1LayerParameter& v1_layer_param,
   for (int i = 0; i < v1_layer_param.blob_share_mode_size(); ++i) {
     while (layer_param->param_size() <= i) { layer_param->add_param(); }
     switch (v1_layer_param.blob_share_mode(i)) {
-    case V1LayerParameter_DimCheckMode_STRICT:
-      mode = ParamSpec_DimCheckMode_STRICT;
+    case V1LayerParameter_DimCheckMode_STRICT_DIM:
+      mode = ParamSpec_DimCheckMode_STRICT_DIM;
       break;
-    case V1LayerParameter_DimCheckMode_PERMISSIVE:
-      mode = ParamSpec_DimCheckMode_PERMISSIVE;
+    case V1LayerParameter_DimCheckMode_PERMISSIVE_DIM:
+      mode = ParamSpec_DimCheckMode_PERMISSIVE_DIM;
       break;
     default:
       LOG(FATAL) << "Unknown blob_share_mode: "

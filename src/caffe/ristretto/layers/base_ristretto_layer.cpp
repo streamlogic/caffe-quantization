@@ -13,6 +13,17 @@ BaseRistrettoLayer<Dtype>::BaseRistrettoLayer() {
   srand(time(NULL));
 }
 
+  int pass=0;
+  int inw=14;
+  
+  template <typename T> void dbg_kern(T *data) {
+    for (int y=0; y<5; y++) {
+      for (int x=0; x<5; x++)
+	printf("%f ",data[y*5+x]);
+      printf("\n");
+    }
+  }
+  
 template <typename Dtype>
 void BaseRistrettoLayer<Dtype>::QuantizeWeights_cpu(
       vector<shared_ptr<Blob<Dtype> > > weights_quantized, const int rounding,
@@ -29,9 +40,12 @@ void BaseRistrettoLayer<Dtype>::QuantizeWeights_cpu(
     break;
   case QuantizationParameter_Precision_DYNAMIC_FIXED_POINT:
     Trim2FixedPoint_cpu(weight, cnt_weight, bw_params_, rounding, fl_params_);
+    if (pass==1)
+      dbg_kern(weight+25);
     if (bias_term) {
       Trim2FixedPoint_cpu(weights_quantized[1]->mutable_cpu_data(),
           weights_quantized[1]->count(), bw_params_, rounding, fl_params_);
+      printf("bias %f\n",weights_quantized[1]->mutable_cpu_data()[0]);
     }
     break;
   case QuantizationParameter_Precision_INTEGER_POWER_OF_2_WEIGHTS:
@@ -45,6 +59,14 @@ void BaseRistrettoLayer<Dtype>::QuantizeWeights_cpu(
   }
 }
 
+  template <typename T> void dbg_out(T *data) {
+    for (int y=0; y<14; y++) {
+      for (int x=0; x<14; x++)
+	printf("%f ",data[y*inw+x]);
+      printf("\n");
+    }
+  }
+  
 template <typename Dtype>
 void BaseRistrettoLayer<Dtype>::QuantizeLayerInputs_cpu(Dtype* data,
       const int count) {
@@ -53,6 +75,8 @@ void BaseRistrettoLayer<Dtype>::QuantizeLayerInputs_cpu(Dtype* data,
       break;
     case QuantizationParameter_Precision_DYNAMIC_FIXED_POINT:
       Trim2FixedPoint_cpu(data, count, bw_layer_in_, rounding_, fl_layer_in_);
+      if (pass==1)
+	dbg_out(data);
       break;
     case QuantizationParameter_Precision_MINIFLOAT:
       Trim2MiniFloat_cpu(data, count, fp_mant_, fp_exp_, rounding_);
@@ -70,6 +94,10 @@ void BaseRistrettoLayer<Dtype>::QuantizeLayerOutputs_cpu(
     case QuantizationParameter_Precision_INTEGER_POWER_OF_2_WEIGHTS:
       break;
     case QuantizationParameter_Precision_DYNAMIC_FIXED_POINT:
+      if (pass==1) {
+	dbg_out(data);
+      }
+      pass++;
       Trim2FixedPoint_cpu(data, count, bw_layer_out_, rounding_, fl_layer_out_);
       break;
     case QuantizationParameter_Precision_MINIFLOAT:
@@ -88,6 +116,7 @@ void BaseRistrettoLayer<Dtype>::Trim2FixedPoint_cpu(Dtype* data, const int cnt,
     // Saturate data
     Dtype max_data = (pow(2, bit_width - 1) - 1) * pow(2, -fl);
     Dtype min_data = -pow(2, bit_width - 1) * pow(2, -fl);
+//    if (index==(3*14+0)) printf("%f", data[index]);
     data[index] = std::max(std::min(data[index], max_data), min_data);
     // Round data
     data[index] /= pow(2, -fl);
@@ -102,7 +131,8 @@ void BaseRistrettoLayer<Dtype>::Trim2FixedPoint_cpu(Dtype* data, const int cnt,
       break;
     }
     data[index] *= pow(2, -fl);
-	}
+//    if (index==(3*14+0)) printf(" -> %f\n", data[index]);
+  }
 }
 
 typedef union {
@@ -155,8 +185,8 @@ void BaseRistrettoLayer<Dtype>::Trim2MiniFloat_cpu(Dtype* data, const int cnt,
       }
     }
     // Assemble result
-    data[index] = pow(-1, d2.parts.sign) * ((mantisa + pow(2, bw_mant)) /
-        pow(2, bw_mant)) * pow(2, exponent - bias_out);
+    data[index] = pow(-1.0, d2.parts.sign) * ((mantisa + pow(2.0, bw_mant)) /
+        pow(2.0, bw_mant)) * pow(2.0, exponent - bias_out);
 	}
 }
 
